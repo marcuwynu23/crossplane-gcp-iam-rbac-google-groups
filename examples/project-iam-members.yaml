@@ -1,0 +1,106 @@
+---
+# Direct managed resource examples (no Composition required).
+#
+# A Crossplane Composition can only create a FIXED set of managed resources in
+# PatchAndTransform mode, but the number of group/role bindings is dynamic
+# (a map of groups to roles). This project is therefore consumed directly via
+# ProjectIAMMember managed resources, one per group/role binding - the
+# Crossplane equivalent of the Terraform `for_each` over the flattened map.
+#
+# Replace PROJECT_ID with your GCP project ID before applying:
+#   kubectl apply -f examples/project-iam-members.yaml
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectIAMMember
+metadata:
+  name: my-free-devops-team-compute-admin
+spec:
+  forProvider:
+    member: group:my-free-devops-team@googlegroups.com
+    project: PROJECT_ID
+    role: roles/compute.admin
+  providerConfigRef:
+    name: gcp-provider-config
+---
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectIAMMember
+metadata:
+  name: my-free-devops-team-run-admin
+spec:
+  forProvider:
+    member: group:my-free-devops-team@googlegroups.com
+    project: PROJECT_ID
+    role: roles/run.admin
+  providerConfigRef:
+    name: gcp-provider-config
+---
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectIAMMember
+metadata:
+  name: my-free-devops-team-cloudbuild-admin
+spec:
+  forProvider:
+    member: group:my-free-devops-team@googlegroups.com
+    project: PROJECT_ID
+    role: roles/cloudbuild.admin
+  providerConfigRef:
+    name: gcp-provider-config
+---
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectIAMMember
+metadata:
+  name: my-free-devops-team-storage-admin
+spec:
+  forProvider:
+    member: group:my-free-devops-team@googlegroups.com
+    project: PROJECT_ID
+    role: roles/storage.admin
+  providerConfigRef:
+    name: gcp-provider-config
+---
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectIAMMember
+metadata:
+  name: my-free-dev-team-compute-viewer
+spec:
+  forProvider:
+    member: group:my-free-dev-team@googlegroups.com
+    project: PROJECT_ID
+    role: roles/compute.viewer
+  providerConfigRef:
+    name: gcp-provider-config
+---
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectIAMMember
+metadata:
+  name: my-free-dev-team-run-developer
+spec:
+  forProvider:
+    member: group:my-free-dev-team@googlegroups.com
+    project: PROJECT_ID
+    role: roles/run.developer
+  providerConfigRef:
+    name: gcp-provider-config
+---
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectIAMMember
+metadata:
+  name: my-free-dev-team-cloudbuild-editor
+spec:
+  forProvider:
+    member: group:my-free-dev-team@googlegroups.com
+    project: PROJECT_ID
+    role: roles/cloudbuild.editor
+  providerConfigRef:
+    name: gcp-provider-config
+---
+apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+kind: ProjectIAMMember
+metadata:
+  name: my-free-dev-team-storage-objectuser
+spec:
+  forProvider:
+    member: group:my-free-dev-team@googlegroups.com
+    project: PROJECT_ID
+    role: roles/storage.objectUser
+  providerConfigRef:
+    name: gcp-provider-config
