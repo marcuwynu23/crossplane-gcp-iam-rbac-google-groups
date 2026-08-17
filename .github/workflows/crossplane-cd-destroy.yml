@@ -1,0 +1,49 @@
+---
+name: CD - GCP IAM RBAC (Destroy)
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      remove_provider:
+        description: "Also uninstall the Crossplane provider (true/false)"
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  destroy:
+    name: Crossplane Destroy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 --decode > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Delete Managed Resources
+        run: |
+          kubectl delete -f examples/ --ignore-not-found --wait=true --timeout=300s
+
+      - name: Uninstall Provider (optional)
+        if: github.event.inputs.remove_provider == 'true'
+        run: |
+          kubectl delete -f provider/provider.yaml
+          kubectl delete providerconfig gcp-provider-config --ignore-not-found
+          kubectl delete secret gcp-creds --namespace crossplane-system --ignore-not-found
+
+      - name: Verify IAM Bindings Removed
+        run: |
+          if kubectl get projectiammembers.cloudplatform.gcp.upbound.io \
+            -o name 2>/dev/null | grep -q .; then
+            echo "ProjectIAMMember resources still exist!"; exit 1
+          else
+            echo "All IAM bindings successfully deleted."
+          fi

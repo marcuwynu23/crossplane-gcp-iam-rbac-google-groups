@@ -1,0 +1,73 @@
+---
+name: CD - GCP IAM RBAC (Apply)
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      project_id:
+        description: GCP project ID
+        required: true
+        type: string
+
+      region:
+        description: "GCP region (Free Tier: us-west1, us-central1, us-east1)"
+        required: true
+        type: string
+        default: us-central1
+
+jobs:
+  apply:
+    name: Crossplane Apply
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 --decode > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Install Crossplane Provider
+        run: kubectl apply -f provider/provider.yaml
+
+      - name: Wait for Provider
+        run: |
+          kubectl wait --for=condition=Healthy \
+            provider/upbound-provider-gcp-cloudplatform --timeout=300s
+
+      - name: Create GCP credentials secret
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          kubectl create secret generic gcp-creds \
+            --namespace crossplane-system \
+            --from-file=creds=<(printf '%s' "$GCP_SA_KEY") \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply ProviderConfig
+        run: |
+          sed -e "s/PROJECT_ID/${{ github.event.inputs.project_id }}/g" \
+            provider/provider-config.yaml | kubectl apply -f -
+
+      - name: Apply Managed Resources
+        run: |
+          for f in examples/*.yaml; do
+            sed -e "s/PROJECT_ID/${{ github.event.inputs.project_id }}/g" \
+              "$f" | kubectl apply -f -
+          done
+
+      - name: Wait for IAM Bindings Ready
+        run: |
+          kubectl wait --for=condition=Ready \
+            projectiammembers.cloudplatform.gcp.upbound.io --all --timeout=300s
+
+      - name: Show IAM Bindings
+        run: |
+          kubectl get projectiammembers.cloudplatform.gcp.upbound.io \
+            -o custom-columns=NAME:.metadata.name,MEMBER:.spec.forProvider.member,ROLE:.spec.forProvider.role
